@@ -1,3 +1,6 @@
-Make it possible to use 128k context length
+## Start Chat service
 
-export VLLM_ALLOW_EXCEEDING_MAX_MODEL_LEN=1
+```
+uv run chat/server.py
+uv run uvicorn chat.client:app --host 0.0.0.0 --port 3000
+```
