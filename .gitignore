@@ -1,4 +1,7 @@
 .venv
 datas/**
+data/**
 .env
 **/__pycache__
+*.jsonl
+*.db

@@ -24,6 +24,10 @@ cmd = [
     SWAP_SPACE,
     "--port",
     "8000",
+    "--rope-scaled",
+    "yarn",
+    "--rope-factor",
+    "4",
 ]
 
 print("Starting vLLM server...")
