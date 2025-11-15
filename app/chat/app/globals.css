@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@import "highlight.js/styles/github-dark.css";
+
+:root {
+    --background: #ffffff;
+    --foreground: #171717;
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #0a0a0a;
+        --foreground: #ededed;
+    }
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.prose pre {
+    background: #0a0a0a;
+}
+
+.prose code {
+    font-size: 0.9rem;
+}
+
+.prose img {
+    border-radius: 12px;
+}
+
+.katex-display {
+    margin: 1.2rem 0;
+    overflow-x: auto;
+    padding: 0.25rem 0;
+}
+
+.prose blockquote {
+    border-left: 4px solid #3f3f46; /* zinc-700 */
+    padding-left: 1rem;
+    color: #d4d4d8;
+    font-style: italic;
+}
+
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.prose th,
+.prose td {
+    border: 1px solid #3f3f46;
+    padding: 0.5rem 0.75rem;
+}
+
+.prose th {
+    background: #18181b;
+}

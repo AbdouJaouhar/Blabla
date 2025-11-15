@@ -14,8 +14,6 @@ cmd = [
     "vllm",
     "serve",
     CHAT_MODEL,
-    "--quantization",
-    "awq",
     "--max-model-len",
     MAX_MODEL_LEN,
     "--gpu-memory-utilization",
@@ -24,10 +22,8 @@ cmd = [
     SWAP_SPACE,
     "--port",
     "8000",
-    "--rope-scaled",
-    "yarn",
-    "--rope-factor",
-    "4",
+    "--host",
+    "0.0.0.0",
 ]
 
 print("Starting vLLM server...")
