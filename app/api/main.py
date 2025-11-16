@@ -1,20 +1,21 @@
 import json
 import os
-from datetime import datetime
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from jinja2 import Template
 
 load_dotenv()
 
 MODEL = os.getenv("CHAT_MODEL")
 VLLM_URL = "http://localhost:8000/v1/chat/completions"
 WINDOW_SIZE = int(os.getenv("WINDOW_SIZE", "4"))
-SYSTEM_PROMPT_TEMPLATE = os.getenv("SYSTEM_PROMPT")
+SYSTEM_PROMPT_TEMPLATE = os.getenv("SYSTEM_PROMPT", "")
+MODEL_TEMPERATURE = os.getenv("MODEL_TEMPERATURE")
+
+print(MODEL_TEMPERATURE)
 app = FastAPI()
 
 
@@ -26,10 +27,10 @@ async def options_handler():
 # Enable CORS for the browser
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # autorise TOUTES les origines
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # autorise GET, POST, OPTIONS, etc.
-    allow_headers=["*"],  # autorise Content-Type, Authorization, etc.
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -40,16 +41,19 @@ class ChatEngine:
 
     async def summarize_history(self):
         """Use vLLM itself to summarize memory."""
-        prompt = (
-            "You are a memory engine.\n"
+        dialog_text = "\n".join(
+            f"{m['role'].upper()}: {m['content']}" for m in self.history
+        )
+
+        user_prompt = (
             "Update the persistent conversation summary.\n\n"
             "Rules:\n"
             "- Keep user facts, preferences, goals.\n"
             "- Remove chit-chat.\n"
             "- Keep it short, accurate, factual.\n"
             "- Never contradict previous summary.\n\n"
-            f"PREVIOUS SUMMARY:\n{self.summary}\n\n"
-            f"NEW DIALOG:\n{json.dumps(self.history)}\n\n"
+            f"PREVIOUS SUMMARY:\n{self.summary or '(empty)'}\n\n"
+            f"NEW DIALOG:\n{dialog_text}\n\n"
             "UPDATED SUMMARY:"
         )
 
@@ -58,8 +62,12 @@ class ChatEngine:
                 VLLM_URL,
                 json={
                     "model": MODEL,
-                    "messages": [{"role": "system", "content": prompt}],
+                    "messages": [
+                        {"role": "system", "content": "You are a memory engine."},
+                        {"role": "user", "content": user_prompt},
+                    ],
                     "stream": False,
+                    "temperature": MODEL_TEMPERATURE,
                 },
             )
 
@@ -80,38 +88,44 @@ class ChatEngine:
                     if not line or not line.startswith("data:"):
                         continue
 
-                    payload = line.replace("data:", "").strip()
+                    payload = line.removeprefix("data:").strip()
 
                     if payload == "[DONE]":
                         break
 
                     token_data = json.loads(payload)
-                    delta = token_data["choices"][0]["delta"].get("content", "")
+                    delta_obj = token_data["choices"][0].get("delta", {}) or {}
+                    delta = delta_obj.get("content", "")
 
                     if delta:
                         assistant_reply += delta
+
                         yield f"data: {json.dumps({'token': delta})}\n\n"
 
-                # Store assistant message in memory
-                self.history.append({"role": "assistant", "content": assistant_reply})
+                # Store assistant message (FIXED: role="assistant", not "system")
+                if assistant_reply:
+                    self.history.append(
+                        {"role": "assistant", "content": assistant_reply}
+                    )
 
                 await self.update_memory()
 
     async def handle_chat(self, user_msg: str):
+        # Add user message to history
         self.history.append({"role": "user", "content": user_msg})
 
-        rendered_system_prompt = Template("{{prompt}}").render(
-            prompt=SYSTEM_PROMPT_TEMPLATE,
-            currentDateTime=datetime.now().isoformat(),
-        )
+        # Render system prompt WITHOUT Jinja
+        rendered_system_prompt = SYSTEM_PROMPT_TEMPLATE
 
         messages = [{"role": "system", "content": rendered_system_prompt}]
 
+        # Add memory
         if self.summary:
             messages.append(
-                {"role": "assistant", "content": f"### MEMORY\n{self.summary}\n"}
+                {"role": "system", "content": f"### MEMORY\n{self.summary}\n"}
             )
 
+        # Add recent conversation window
         messages.extend(self.history[-WINDOW_SIZE:])
 
         return StreamingResponse(

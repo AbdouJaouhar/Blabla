@@ -1,4 +1,4 @@
-export async function POST(req) {
+export async function POST(req: Request): Promise<Response> {
     const body = await req.json();
 
     const response = await fetch("http://localhost:3001/api/chat", {
@@ -9,16 +9,18 @@ export async function POST(req) {
         body: JSON.stringify(body),
     });
 
-    // Re-stream the SSE response
-    const readable = new ReadableStream({
+    const readable = new ReadableStream<Uint8Array>({
         async start(controller) {
-            const reader = response.body.getReader();
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                controller.enqueue(value);
+            const reader = response.body!.getReader();
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) controller.enqueue(value);
+                }
+            } finally {
+                controller.close();
             }
-            controller.close();
         },
     });
 
