@@ -1,6 +1,45 @@
 #!/bin/bash
 set -e
 
+echo "set -g mouse on" > ~/.tmux.conf
+
+# Reload tmux config if inside a tmux session
+if [ -n "$TMUX" ]; then
+    tmux source-file ~/.tmux.conf
+    echo "tmux configuration reloaded."
+else
+    echo "Not inside a tmux session. Start tmux to use the new config."
+fi
+
+#######################################
+# Parse arguments
+#######################################
+SERVICE="all"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --service)
+      SERVICE="$2"
+      shift
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      exit 1
+      ;;
+  esac
+done
+
+echo "Selected service: $SERVICE"
+
+#######################################
+# Flags to track which services we started
+#######################################
+STARTED_REDIS=false
+STARTED_BACKEND=false
+STARTED_FRONTEND=false
+STARTED_VLLM=false
+
 #######################################
 # Install Redis + lnav if missing
 #######################################
@@ -29,16 +68,6 @@ if ! command -v lnav >/dev/null 2>&1; then
 fi
 
 #######################################
-# Kill old processes
-#######################################
-echo "Killing existing processes..."
-pkill -f "vllm serve" 2>/dev/null || true
-pkill -f "uvicorn app.api.main" 2>/dev/null || true
-pkill -f "node" 2>/dev/null || true
-pkill -f "redis-server" 2>/dev/null || true
-sleep 1
-
-#######################################
 # Clean logs directory & create logs
 #######################################
 echo "Cleaning logs directory..."
@@ -58,64 +87,96 @@ if [ -f .env ]; then
 fi
 
 #######################################
-# Start Redis Server (strip ANSI)
+# Start Redis server
 #######################################
-echo "Starting Redis server..."
-redis-server 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_redis.txt &
-REDIS_PID=$!
-echo "Redis PID: $REDIS_PID"
-sleep 0.5
+if [[ "$SERVICE" == "redis" || "$SERVICE" == "all" ]]; then
+  echo "Starting Redis server..."
+  redis-server 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_redis.txt &
+  REDIS_PID=$!
+  STARTED_REDIS=true
+  echo "Redis PID: $REDIS_PID"
+  sleep 0.5
+fi
 
 #######################################
-# Start Backend (strip ANSI)
+# Start Backend
 #######################################
-echo "Starting backend..."
-uv run uvicorn app.api.main:app --host 0.0.0.0 --port 3001 --reload \
-  2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_backend.txt &
-BACKEND_PID=$!
-echo "Backend PID: $BACKEND_PID"
+if [[ "$SERVICE" == "backend" || "$SERVICE" == "all" ]]; then
+  echo "Starting backend..."
+  echo "Model utilisé: $CHAT_MODEL"
+  uv run uvicorn app.api.main:app --host 0.0.0.0 --port 3001 --reload \
+    2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_backend.txt &
+  BACKEND_PID=$!
+  STARTED_BACKEND=true
+  echo "Backend PID: $BACKEND_PID"
+fi
 
 #######################################
-# Start Frontend (strip ANSI)
+# Start Frontend
 #######################################
-echo "Starting frontend..."
-cd app/chat
-npm run dev 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > ../logs/logs_frontend.txt &
-FRONTEND_PID=$!
-cd ../..
-echo "Frontend PID: $FRONTEND_PID"
+if [[ "$SERVICE" == "frontend" || "$SERVICE" == "all" ]]; then
+  echo "Starting frontend..."
+  cd app/chat
+  npm run init 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > ../../logs/logs_frontend.txt &
+  FRONTEND_PID=$!
+  STARTED_FRONTEND=true
+  cd ../..
+  echo "Frontend PID: $FRONTEND_PID"
+fi
 
 #######################################
-# Start vLLM (strip ANSI)
+# Start vLLM
 #######################################
-echo "Starting vLLM..."
+if [[ "$SERVICE" == "vllm" || "$SERVICE" == "all" ]]; then
+  echo "Starting vLLM..."
+  # sudo apt-get update -y
+  # sudo apt-get install -y cuda-12-2
+  export LD_LIBRARY_PATH=/usr/local/cuda-12.2/lib64:$LD_LIBRARY_PATH
 
-export LMCACHE_CHUNK_SIZE=256
-export LMCACHE_USE_EXPERIMENTAL=True
-export LMCACHE_REMOTE_URL="redis://localhost:6379"
-export LMCACHE_REMOTE_SERDE="naive"
+  export LMCACHE_CHUNK_SIZE=256
+  export LMCACHE_USE_EXPERIMENTAL=True
+  export LMCACHE_REMOTE_URL="redis://localhost:6379"
+  export LMCACHE_REMOTE_SERDE="naive"
+  # Remove any existing CUDA entries from PATH and LD_LIBRARY_PATH
+  export PATH=$(echo $PATH | tr ':' '\n' | grep -v cuda | tr '\n' ':' | sed 's/:$//')
+  export LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH 2>/dev/null | tr ':' '\n' | grep -v cuda | tr '\n' ':' | sed 's/:$//')
 
-vllm serve "$CHAT_MODEL" \
-  --max-model-len "$MAX_MODEL_LEN" \
-  --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
-  --swap-space "$SWAP_SPACE" \
-  --port 8000 \
-  --host 0.0.0.0 \
-  --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}' \
-  2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_vllm.txt &
-VLLM_PID=$!
-echo "vLLM PID: $VLLM_PID"
+  # Add only CUDA 12.2
+  export PATH=/usr/local/cuda-12.2/bin:$PATH
+  export LD_LIBRARY_PATH=/usr/local/cuda-12.2/lib64:$LD_LIBRARY_PATH
+
+  # Optional: also set CUDA_HOME and CUDA_PATH for tools that look for these
+  export CUDA_HOME=/usr/local/cuda-12.2
+  export CUDA_PATH=/usr/local/cuda-12.2
+
+
+  # uv pip uninstall vllm
+  # uv pip install vllm --torch-backend=auto
+echo "Model utilisé: $CHAT_MODEL"
+uv run vllm serve "$CHAT_MODEL" \
+    --max-model-len "$MAX_MODEL_LEN" \
+    --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
+    --swap-space "$SWAP_SPACE" \
+    --port 8000 \
+    --host 0.0.0.0 \
+    --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}'
+  VLLM_PID=$!
+  STARTED_VLLM=true
+  echo "vLLM PID: $VLLM_PID"
+fi
 
 #######################################
 # Cleanup on exit
 #######################################
 cleanup() {
-  echo "Shutting down everything..."
-  kill $VLLM_PID     2>/dev/null || true
-  kill $BACKEND_PID  2>/dev/null || true
-  kill $FRONTEND_PID 2>/dev/null || true
-  kill $REDIS_PID    2>/dev/null || true
+  echo "Shutting down services started by this script..."
+
+  $STARTED_VLLM     && kill $VLLM_PID     2>/dev/null || true
+  $STARTED_BACKEND  && kill $BACKEND_PID  2>/dev/null || true
+  $STARTED_FRONTEND && kill $FRONTEND_PID 2>/dev/null || true
+  $STARTED_REDIS    && kill $REDIS_PID    2>/dev/null || true
 }
+
 trap cleanup EXIT
 
 echo "----------------------------------------"
@@ -125,8 +186,8 @@ echo "Frontend   → http://localhost:3000"
 echo "vLLM API   → http://localhost:8000"
 echo "Redis      → redis://localhost:6379"
 echo "----------------------------------------"
-echo "Logs now contain NO ANSI colors → full compatibility with lnav"
-echo "To view:  lnav logs/"
+echo "Logs contain no ANSI colors → compatible with lnav"
+echo "To view logs: lnav logs/"
 echo "----------------------------------------"
 
 wait

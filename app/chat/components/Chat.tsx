@@ -3,7 +3,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import MessageBubble from "./MessageBubble"; // assuming this exists
-import { OrbitProgress } from "react-loading-indicators";
+import { v4 as uuid } from "uuid";
 type Role = "user" | "assistant";
 
 interface Message {
@@ -71,14 +71,14 @@ export default function Chat() {
         if (!input.trim() || isStreaming) return;
 
         const userMessage: Message = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             role: "user",
             content: input.trim(),
             streaming: false,
         };
 
         const assistantMessage: Message = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             role: "assistant",
             content: "",
             streaming: true,
