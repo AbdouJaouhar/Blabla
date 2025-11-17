@@ -45,7 +45,6 @@ echo "Cleaning logs directory..."
 rm -rf logs
 mkdir -p logs
 
-# Pre-create log files
 touch logs/logs_backend.txt
 touch logs/logs_frontend.txt
 touch logs/logs_redis.txt
@@ -59,35 +58,35 @@ if [ -f .env ]; then
 fi
 
 #######################################
-# Start Redis Server
+# Start Redis Server (strip ANSI)
 #######################################
 echo "Starting Redis server..."
-redis-server > logs/logs_redis.txt 2>&1 &
+redis-server 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_redis.txt &
 REDIS_PID=$!
 echo "Redis PID: $REDIS_PID"
 sleep 0.5
 
 #######################################
-# Start Backend
+# Start Backend (strip ANSI)
 #######################################
 echo "Starting backend..."
 uv run uvicorn app.api.main:app --host 0.0.0.0 --port 3001 --reload \
-  > logs/logs_backend.txt 2>&1 &
+  2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_backend.txt &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 
 #######################################
-# Start Frontend
+# Start Frontend (strip ANSI)
 #######################################
 echo "Starting frontend..."
 cd app/chat
-npm run dev > ../logs/logs_frontend.txt 2>&1 &
+npm run dev 2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > ../logs/logs_frontend.txt &
 FRONTEND_PID=$!
 cd ../..
 echo "Frontend PID: $FRONTEND_PID"
 
 #######################################
-# Start vLLM
+# Start vLLM (strip ANSI)
 #######################################
 echo "Starting vLLM..."
 
@@ -103,8 +102,7 @@ vllm serve "$CHAT_MODEL" \
   --port 8000 \
   --host 0.0.0.0 \
   --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}' \
-  > logs/logs_vllm.txt 2>&1 &
-
+  2>&1 | sed -u "s/\x1b\[[0-9;]*m//g" > logs/logs_vllm.txt &
 VLLM_PID=$!
 echo "vLLM PID: $VLLM_PID"
 
@@ -127,7 +125,8 @@ echo "Frontend   → http://localhost:3000"
 echo "vLLM API   → http://localhost:8000"
 echo "Redis      → redis://localhost:6379"
 echo "----------------------------------------"
-echo "To view logs with color:  lnav logs/"
+echo "Logs now contain NO ANSI colors → full compatibility with lnav"
+echo "To view:  lnav logs/"
 echo "----------------------------------------"
 
 wait
