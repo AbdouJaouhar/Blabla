@@ -151,26 +151,111 @@ body {
     padding: 2rem 0rem;
 }
 
-.chat-input {
-    flex: 1;
-    max-width: 700px;
+.chat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+
     width: 100%;
-    resize: none;
+    max-width: 700px;
 
-    padding: 0.9rem 2rem;
-    border-radius: 4rem;
+    padding: 0.7rem 1rem;
+    border-radius: 1rem;
 
-    background: var(--input-bg);
-    border: 1px solid var(--input-border);
-    font-size: 1rem;
-    color: var(--text-primary);
+    background: var(--input-bg, #2a2a2a);
+    border: 1px solid var(--input-border, #3d3d3d);
 
-    outline: none;
+    color: var(--text-primary, #fff);
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
-.chat-input:focus {
-    border-color: var(--brand-green);
-    box-shadow: 0 0 0 1px var(--brand-green);
+.chat-box:focus-within {
+    border-color: var(--brand-green, #10a37f);
+    box-shadow: 0 0 0 1px var(--brand-green, #10a37f);
+}
+
+/* Left icon container (image upload, plus, etc.) */
+.chat-box-plus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+
+    border-radius: 50%;
+    background: var(--bubble-bg, #3a3a3a);
+    cursor: pointer;
+    user-select: none;
+
+    transition: background 0.2s;
+}
+
+.chat-box-prompt-area {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    margin: 0;
+}
+
+.chat-box-plus:hover {
+    background: #4a4a4a;
+}
+
+/* TEXTAREA – behaves like ChatGPT input */
+.chat-box-textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: 1px solid red;
+
+    background: transparent;
+    border: none;
+    outline: none;
+
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text-primary, #fff);
+
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.chat-box-textarea::placeholder {
+    color: var(--text-secondary, #9b9b9b);
+}
+
+/* Send button (arrow) */
+.chat-box-send {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 4rem;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 1.1rem;
+
+    background: #10a37f;
+    color: white;
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        opacity 0.2s;
+}
+
+.chat-box-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.chat-box-send:not(:disabled):hover {
+    background: #0e8f6d;
 }
 
 .chat-send-btn {
@@ -193,6 +278,14 @@ body {
 .chat-send-btn:disabled {
     opacity: 0.5;
     cursor: default;
+}
+
+.prompt-image-preview {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0;
+    margin: 0;
 }
 
 /* ----------------------------- */
@@ -352,4 +445,13 @@ li > p:first-child {
 
 .md-inline-code {
     max-width: 100%;
+}
+
+.chat-message img {
+    max-width: 240px; /* like ChatGPT */
+    max-height: 240px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin: 6px 0;
+    display: block;
 }

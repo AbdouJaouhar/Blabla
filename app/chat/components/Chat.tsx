@@ -1,79 +1,69 @@
 "use client";
 
-import React, { FormEvent, useEffect, useRef, useState } from "react";
-import MarkdownRenderer from "./MarkdownRenderer";
-import MessageBubble from "./MessageBubble"; // assuming this exists
+import React, { useRef, useState, useEffect } from "react";
 import { v4 as uuid } from "uuid";
-type Role = "user" | "assistant";
+import type { Message } from "../utils/types";
+import { cleanLatex } from "../utils/latex";
 
-interface Message {
-    id: string;
-    role: Role;
-    content: string;
-    streaming: boolean;
-}
-
-const API_URL = "/api/chat";
-
-/**
- * LaTeX cleaner
- */
-export function cleanLatex(text: string): string {
-    if (typeof text !== "string") return text;
-    text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, inner) => `$${inner}$`);
-    text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$${inner}$`);
-    return text;
-}
+import MessageList from "./MessageList";
+import ChatInput from "./ChatInput";
+import useChatStreaming from "./useChatStreaming";
 
 export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [pendingImages, setPendingImages] = useState<string[]>([]);
     const [input, setInput] = useState("");
-    const [isStreaming, setIsStreaming] = useState(false);
 
-    // Scroll handling
     const containerRef = useRef<HTMLDivElement | null>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
     const [autoScroll, setAutoScroll] = useState(true);
 
-    const scrollToBottom = () => {
-        if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    const { isStreaming, sendChatRequest } = useChatStreaming(
+        messages,
+        setMessages,
+        cleanLatex,
+    );
 
-        scrollTimeout.current = setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({
-                behavior: "smooth",
-            });
-        }, 50);
-    };
-
-    // Detect user manual scroll → toggle autoScroll
+    // ----------------------------
+    // Auto-scroll handler
+    // ----------------------------
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
 
         const handleScroll = () => {
-            const nearBottom =
+            const isNearBottom =
                 el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-            setAutoScroll(nearBottom);
+            setAutoScroll(isNearBottom);
         };
 
         el.addEventListener("scroll", handleScroll);
         return () => el.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Scroll when messages change and autoScroll is true
     useEffect(() => {
-        if (autoScroll) scrollToBottom();
+        if (!autoScroll) return;
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, autoScroll]);
 
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || isStreaming) return;
+    // ----------------------------
+    // Submit handler
+    // ----------------------------
+    const handleSubmit = async () => {
+        const text = input.trim();
+        if ((!text && pendingImages.length === 0) || isStreaming) return;
+
+        // Build final markdown content
+        const imgMarkdown = pendingImages
+            .map((url) => `![image](${url})`)
+            .join("\n\n");
+
+        const displayContent = [text, imgMarkdown].filter(Boolean).join("\n\n");
 
         const userMessage: Message = {
             id: uuid(),
             role: "user",
-            content: input.trim(),
+            content: displayContent,
             streaming: false,
         };
 
@@ -85,149 +75,29 @@ export default function Chat() {
         };
 
         setMessages((prev) => [...prev, userMessage, assistantMessage]);
+
         setInput("");
-        setIsStreaming(true);
+        setPendingImages([]);
 
-        try {
-            const res = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMessage.content }),
-            });
-
-            if (!res.body) throw new Error("No response body");
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const parts = buffer.split("\n\n");
-                buffer = parts.pop() ?? "";
-
-                for (const part of parts) {
-                    const lines = part.split("\n");
-                    for (const line of lines) {
-                        if (!line.startsWith("data:")) continue;
-
-                        const dataStr = line.slice(5).trim();
-                        if (!dataStr || dataStr === "[DONE]") continue;
-
-                        let parsed: { token?: string };
-                        try {
-                            parsed = JSON.parse(dataStr);
-                        } catch {
-                            continue;
-                        }
-
-                        if (!parsed.token) continue;
-                        const token = parsed.token;
-
-                        setMessages((prev) =>
-                            prev.map((m) =>
-                                m.id === assistantMessage.id
-                                    ? {
-                                          ...m,
-                                          content: cleanLatex(
-                                              m.content + token,
-                                          ),
-                                      }
-                                    : m,
-                            ),
-                        );
-                    }
-                }
-            }
-        } catch (err) {
-            console.error("Streaming error:", err);
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    role: "assistant",
-                    content:
-                        "⚠️ An error occurred while contacting the server.",
-                    streaming: false,
-                },
-            ]);
-        } finally {
-            setIsStreaming(false);
-            setMessages((prev) =>
-                prev.map((m) =>
-                    m.role === "assistant" && m.streaming
-                        ? { ...m, streaming: false }
-                        : m,
-                ),
-            );
-        }
+        await sendChatRequest(text, pendingImages, assistantMessage.id);
     };
 
     return (
         <div className="chat-container">
-            {messages.length === 0 ? (
-                <div className="chat-empty">
-                    <p className="chat-empty-prompt">Hey, how you doing ?</p>
+            <MessageList
+                messages={messages}
+                containerRef={containerRef}
+                messagesEndRef={messagesEndRef}
+            />
 
-                    <form className="chat-input-row" onSubmit={handleSubmit}>
-                        <textarea
-                            className="chat-input"
-                            value={input}
-                            placeholder="Ask a question"
-                            rows={1}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    void handleSubmit(
-                                        e as unknown as FormEvent,
-                                    );
-                                }
-                            }}
-                        />
-                    </form>
-                </div>
-            ) : (
-                <>
-                    <div className="chat-messages" ref={containerRef}>
-                        {messages.map((msg) => (
-                            <MessageBubble key={msg.id} role={msg.role}>
-                                <MarkdownRenderer
-                                    disableMermaid={msg.streaming}
-                                >
-                                    {msg.content}
-                                </MarkdownRenderer>
-                            </MessageBubble>
-                        ))}
-
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    <form
-                        className="chat-input-row sticky bottom-0 bg-white"
-                        onSubmit={handleSubmit}
-                    >
-                        <textarea
-                            className="chat-input"
-                            value={input}
-                            placeholder="Ask a question"
-                            rows={1}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    void handleSubmit(
-                                        e as unknown as FormEvent,
-                                    );
-                                }
-                            }}
-                        />
-                    </form>
-                </>
-            )}
+            <ChatInput
+                input={input}
+                setInput={setInput}
+                pendingImages={pendingImages}
+                setPendingImages={setPendingImages}
+                onSubmit={handleSubmit}
+                disabled={isStreaming}
+            />
         </div>
     );
 }

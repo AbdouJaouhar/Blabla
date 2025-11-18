@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 
@@ -15,7 +16,6 @@ WINDOW_SIZE = int(os.getenv("WINDOW_SIZE", "4"))
 SYSTEM_PROMPT_TEMPLATE = os.getenv("SYSTEM_PROMPT", "")
 MODEL_TEMPERATURE = os.getenv("MODEL_TEMPERATURE")
 
-print(MODEL_TEMPERATURE)
 app = FastAPI()
 
 
@@ -99,10 +99,9 @@ class ChatEngine:
 
                     if delta:
                         assistant_reply += delta
-
                         yield f"data: {json.dumps({'token': delta})}\n\n"
 
-                # Store assistant message (FIXED: role="assistant", not "system")
+                # Store assistant message (role="assistant")
                 if assistant_reply:
                     self.history.append(
                         {"role": "assistant", "content": assistant_reply}
@@ -110,9 +109,15 @@ class ChatEngine:
 
                 await self.update_memory()
 
-    async def handle_chat(self, user_msg: str):
-        # Add user message to history
-        self.history.append({"role": "user", "content": user_msg})
+    async def handle_chat(self, user_msg: str, images: list[str]):
+        images = images or []
+
+        # For memory: text-only representation
+        history_text = user_msg or ""
+        if images:
+            history_text += "\n[User sent images: " + ", ".join(images) + "]"
+
+        self.history.append({"role": "user", "content": history_text})
 
         # Render system prompt WITHOUT Jinja
         rendered_system_prompt = SYSTEM_PROMPT_TEMPLATE
@@ -125,8 +130,42 @@ class ChatEngine:
                 {"role": "system", "content": f"### MEMORY\n{self.summary}\n"}
             )
 
-        # Add recent conversation window
-        messages.extend(self.history[-WINDOW_SIZE:])
+        # Add recent conversation window (deep copy so we can mutate safely)
+        window = self.history[-WINDOW_SIZE:]
+        messages.extend(copy.deepcopy(window))
+
+        # Replace last user message in this window with multimodal content
+        if messages and messages[-1]["role"] == "user":
+            if images:
+                user_content = []
+                if user_msg:
+                    user_content.append({"type": "text", "text": user_msg})
+
+                # Convert relative URLs like "/uploads/..." to absolute
+                for rel_url in images:
+                    url = rel_url
+                    if rel_url.startswith("/"):
+                        url = f"http://localhost:3000{rel_url}"
+
+                    user_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": url,
+                            },
+                        }
+                    )
+
+                messages[-1] = {
+                    "role": "user",
+                    "content": user_content,
+                }
+            else:
+                # pure text user message; nothing special
+                messages[-1] = {
+                    "role": "user",
+                    "content": user_msg,
+                }
 
         return StreamingResponse(
             self.stream_vllm(messages),
@@ -145,8 +184,9 @@ engine = ChatEngine()
 @app.post("/api/chat")
 async def chat(request: Request):
     body = await request.json()
-    user_msg = body.get("message", "")
-    return await engine.handle_chat(user_msg)
+    user_msg = body.get("message", "") or ""
+    images = body.get("images", []) or []
+    return await engine.handle_chat(user_msg, images)
 
 
 if __name__ == "__main__":
