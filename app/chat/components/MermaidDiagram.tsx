@@ -56,7 +56,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = React.memo(({ code }) => {
             } catch {
                 if (alive) {
                     el.innerHTML =
-                        '<pre class="mermaid-error">Invalid Mermaid syntax</pre>';
+                        '<pre className="mermaid-error">Invalid Mermaid syntax</pre>';
                 }
             }
 

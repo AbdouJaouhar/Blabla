@@ -227,6 +227,46 @@ body {
     color: var(--text-secondary, #9b9b9b);
 }
 
+/* rounded-md relative aspect-square min-w-[8rem] max-w-[8rem] border border-purple-500 mb-[1rem]  */
+
+.prompt-uploaded-image{
+    width: 8rem;
+    height: 8rem;
+    background: lightblue;
+    position: relative;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid #656565;
+}
+
+.prompt-uploaded-image img{
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+    height: 100%;
+}
+
+.prompt-uploaded-image-btn{
+    aspect-ratio: 1 / 1;
+    width: 20px;
+    height: auto;
+    position: absolute;
+    right: 0.5rem;
+    top: 0.5rem;
+    background: white;
+    border: none;
+    cursor: pointer;
+    color: #252525;
+    border-radius: 0.2rem;
+    opacity: 0.7;
+    text-align: center;
+}
+.prompt-uploaded-image-btn:hover{
+    opacity: 1;
+}
 /* Send button (arrow) */
 .chat-box-send {
     width: 32px;

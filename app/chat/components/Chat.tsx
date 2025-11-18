@@ -8,10 +8,12 @@ import { cleanLatex } from "../utils/latex";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import useChatStreaming from "./useChatStreaming";
+import {PendingImage} from "../utils/types"
+
 
 export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [pendingImages, setPendingImages] = useState<string[]>([]);
+    const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [input, setInput] = useState("");
 
     const containerRef = useRef<HTMLDivElement | null>(null);

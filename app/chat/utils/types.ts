@@ -6,3 +6,8 @@ export interface Message {
     content: string;
     streaming: boolean;
 }
+
+export interface PendingImage {
+  id: string;
+  url: string;
+}
