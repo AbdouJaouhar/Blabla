@@ -15,25 +15,16 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-# -------------------------------------------------------------------
-# Base
-# -------------------------------------------------------------------
 class Base(DeclarativeBase):
     pass
 
 
-# -------------------------------------------------------------------
-# Enums
-# -------------------------------------------------------------------
 class SenderRole(enum.Enum):
     user = "user"
     assistant = "assistant"
     system = "system"
 
 
-# -------------------------------------------------------------------
-# Users
-# -------------------------------------------------------------------
 class Users(Base):
     __tablename__ = "users"
 
@@ -41,7 +32,6 @@ class Users(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
 
-    # SQLite safe JSON default
     user_metadata: Mapped[dict[str, Any]] = mapped_column(
         JSON,
         server_default="{}",
@@ -63,9 +53,6 @@ class Users(Base):
     )
 
 
-# -------------------------------------------------------------------
-# Chats
-# -------------------------------------------------------------------
 class Chats(Base):
     __tablename__ = "chats"
 
@@ -97,9 +84,6 @@ class Chats(Base):
     )
 
 
-# -------------------------------------------------------------------
-# Messages
-# -------------------------------------------------------------------
 class Messages(Base):
     __tablename__ = "messages"
 
@@ -109,9 +93,7 @@ class Messages(Base):
         ForeignKey("chats.id", ondelete="CASCADE"), index=True
     )
 
-    sender: Mapped[SenderRole] = mapped_column(
-        Enum(SenderRole, native_enum=False)  # portable enum storage
-    )
+    sender: Mapped[SenderRole] = mapped_column(Enum(SenderRole, native_enum=False))
 
     content: Mapped[str] = mapped_column(Text)
 
@@ -122,9 +104,6 @@ class Messages(Base):
     chat: Mapped["Chats"] = relationship(back_populates="messages")
 
 
-# -------------------------------------------------------------------
-# Models / LLM Profile
-# -------------------------------------------------------------------
 class Models(Base):
     __tablename__ = "models"
 
@@ -149,14 +128,10 @@ class Models(Base):
     )
 
 
-# -------------------------------------------------------------------
-# User Custom Model Prompt
-# -------------------------------------------------------------------
 class UserCustomModelPrompt(Base):
     __tablename__ = "user_custom_model_prompt"
 
-    __table_args__ = (UniqueConstraint("user_id", "model_id", name="uq_user_model"),)
-    )
+    __table_args__ = UniqueConstraint("user_id", "model_id", name="uq_user_model")
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

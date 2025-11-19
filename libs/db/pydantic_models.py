@@ -1,5 +1,3 @@
-# pydantic_models.py
-
 from __future__ import annotations
 
 import datetime
@@ -8,20 +6,11 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# ===================================================================
-# ENUMS
-# ===================================================================
-
 
 class SenderRole(str, Enum):
     user = "user"
     assistant = "assistant"
     system = "system"
-
-
-# ===================================================================
-# BASE
-# ===================================================================
 
 
 class OrmBase(BaseModel):
@@ -30,14 +19,9 @@ class OrmBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ===================================================================
-# USER MODELS
-# ===================================================================
-
-
 class UserCreate(OrmBase):
     email: str
-    password: str  # Plain password input only
+    password: str
 
 
 class UserUpdate(OrmBase):
@@ -58,11 +42,6 @@ class UserReadWithChats(UserRead):
 
 class UserReadWithCustomPrompts(UserRead):
     custom_model_prompts: List["UserCustomModelPromptRead"]
-
-
-# ===================================================================
-# CHAT MODELS
-# ===================================================================
 
 
 class ChatCreate(OrmBase):
@@ -88,11 +67,6 @@ class ChatReadWithMessages(ChatRead):
     messages: List["MessageRead"]
 
 
-# ===================================================================
-# MESSAGE MODELS
-# ===================================================================
-
-
 class MessageCreate(OrmBase):
     chat_id: int
     sender: SenderRole
@@ -105,11 +79,6 @@ class MessageRead(OrmBase):
     sender: SenderRole
     content: str
     created_at: datetime.datetime
-
-
-# ===================================================================
-# MODEL (LLM PROFILE) MODELS
-# ===================================================================
 
 
 class ModelCreate(OrmBase):
@@ -138,11 +107,6 @@ class ModelReadWithPrompts(ModelRead):
     custom_model_prompts: List["UserCustomModelPromptRead"]
 
 
-# ===================================================================
-# USER CUSTOM MODEL PROMPT MODELS
-# ===================================================================
-
-
 class UserCustomModelPromptCreate(OrmBase):
     user_id: int
     model_id: int
@@ -159,10 +123,6 @@ class UserCustomModelPromptRead(OrmBase):
     model_id: int
     prompt: Optional[str]
 
-
-# ===================================================================
-# FORWARD REF FIXES (REQUIRED)
-# ===================================================================
 
 UserReadWithChats.model_rebuild()
 UserReadWithCustomPrompts.model_rebuild()

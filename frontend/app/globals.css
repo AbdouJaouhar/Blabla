@@ -3,9 +3,6 @@
 @tailwind utilities;
 
 @import "highlight.js/styles/atom-one-dark.css";
-/* ----------------------------- */
-/*      GLOBAL DARK SETTINGS     */
-/* ----------------------------- */
 
 :root {
     color-scheme: dark;
@@ -30,10 +27,6 @@
     --code-border: #2e3033;
 }
 
-/* ----------------------------- */
-/*          PAGE LAYOUT          */
-/* ----------------------------- */
-
 html,
 body {
     margin: 0;
@@ -52,13 +45,9 @@ body {
 .chat-shell {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* viewport height */
-    overflow: hidden; /* global scrollbars off */
+    height: 100vh;
+    overflow: hidden;
 }
-
-/* ----------------------------- */
-/*         FULL WIDTH CHAT       */
-/* ----------------------------- */
 
 .chat-container {
     flex: 1;
@@ -68,27 +57,20 @@ body {
     flex-direction: column;
 }
 
-/* ChatGPT uses a centered readable text width inside full-width area */
-
 .chat-messages {
     flex: 1 1 0;
     overflow-y: auto;
-    display: flex; /* make it a flex container */
-    flex-direction: column; /* children stacked vertically */
-    align-items: center; /* horizontal centre */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 1rem 0;
 }
 
-/* keep every message block (bubbles, tables, math, etc.) readable */
 .chat-messages > * {
     width: 100%;
-    max-width: 900px; /* same limit you had before */
+    max-width: 900px;
     padding: 0 1rem;
 }
-
-/* ----------------------------- */
-/*          MESSAGE BUBBLES      */
-/* ----------------------------- */
 
 .bubble-row {
     display: flex;
@@ -125,10 +107,6 @@ body {
     max-width: 800px;
 }
 
-/* ----------------------------- */
-/*        INPUT AREA (FULL)      */
-/* ----------------------------- */
-
 .chat-input-row {
     width: 100%;
     padding: 1rem 1rem;
@@ -147,7 +125,7 @@ body {
 
 .chat-input-row {
     position: sticky;
-    flex: 0 0 auto; /* fixed height */
+    flex: 0 0 auto;
     padding: 2rem 0rem;
 }
 
@@ -176,7 +154,6 @@ body {
     box-shadow: 0 0 0 1px var(--brand-green, #10a37f);
 }
 
-/* Left icon container (image upload, plus, etc.) */
 .chat-box-plus {
     display: flex;
     align-items: center;
@@ -204,7 +181,6 @@ body {
     background: #4a4a4a;
 }
 
-/* TEXTAREA – behaves like ChatGPT input */
 .chat-box-textarea {
     flex: 1;
     width: 100%;
@@ -227,9 +203,7 @@ body {
     color: var(--text-secondary, #9b9b9b);
 }
 
-/* rounded-md relative aspect-square min-w-[8rem] max-w-[8rem] border border-purple-500 mb-[1rem]  */
-
-.prompt-uploaded-image{
+.prompt-uploaded-image {
     width: 8rem;
     height: 8rem;
     background: lightblue;
@@ -241,7 +215,7 @@ body {
     border: 1px solid #656565;
 }
 
-.prompt-uploaded-image img{
+.prompt-uploaded-image img {
     display: block;
     object-fit: cover;
     object-position: center;
@@ -249,7 +223,7 @@ body {
     height: 100%;
 }
 
-.prompt-uploaded-image-btn{
+.prompt-uploaded-image-btn {
     aspect-ratio: 1 / 1;
     width: 20px;
     height: auto;
@@ -264,10 +238,10 @@ body {
     opacity: 0.7;
     text-align: center;
 }
-.prompt-uploaded-image-btn:hover{
+.prompt-uploaded-image-btn:hover {
     opacity: 1;
 }
-/* Send button (arrow) */
+
 .chat-box-send {
     width: 32px;
     height: 32px;
@@ -328,10 +302,6 @@ body {
     margin: 0;
 }
 
-/* ----------------------------- */
-/*        MARKDOWN (GPT-like)    */
-/* ----------------------------- */
-
 .md-h1 {
     font-size: 1.6rem;
     font-weight: 600;
@@ -378,7 +348,7 @@ pre.md-code-block {
     padding: 0;
 }
 .md-li:not(:last-child) {
-    margin-bottom: 0; /* remove spacing between list items */
+    margin-bottom: 0;
 }
 
 .md-li > *:first-child {
@@ -424,15 +394,15 @@ li > p:first-child {
 .chat-empty {
     display: flex;
     flex-direction: column;
-    justify-content: center; /* vertical centre */
-    align-items: center; /* horizontal centre children that shrink */
+    justify-content: center;
+    align-items: center;
     height: 100%;
     gap: 1rem;
 }
 
 .chat-empty-prompt {
-    width: 100%; /* take full row */
-    text-align: center; /* centre the text inside that row */
+    width: 100%;
+    text-align: center;
     margin: 0;
     font-size: 2rem;
     font-weight: normal;
@@ -488,7 +458,7 @@ li > p:first-child {
 }
 
 .chat-message img {
-    max-width: 240px; /* like ChatGPT */
+    max-width: 240px;
     max-height: 240px;
     object-fit: cover;
     border-radius: 12px;
