@@ -1,0 +1,133 @@
+version: "3.9"
+
+services:
+  ############################
+  # model serving service
+  ############################
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
+    command: >
+      --model Qwen/Qwen3-0.6B
+      --host 0.0.0.0
+      --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - VLLM_WORKER_MULTIPROCESS=FALSE
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    restart: unless-stopped
+
+  ############################
+  # FastAPI service
+  ############################
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile.api
+    container_name: api
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - milvus
+      - vllm
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/appdb
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BROKER=kafka:9092
+      - MILVUS_URI=http://milvus:19530
+      - VLLM_URL=http://vllm:8000
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  ############################
+  # Worker Container (CPU-only)
+  ############################
+  worker:
+    build:
+      context: ./
+      dockerfile: Dockerfile.worker
+    container_name: worker
+    depends_on:
+      - redis
+      - postgres
+      - kafka
+      - milvus
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/appdb
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BROKER=kafka:9092
+      - MILVUS_URI=http://milvus:19530
+    restart: unless-stopped
+
+  ############################
+  # Postgres
+  ############################
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  ############################
+  # Redis
+  ############################
+  redis:
+    image: redis:8.4
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  ############################
+  # Kafka (single broker)
+  ############################
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    volumes:
+      - kafkadata:/bitnami/kafka
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+
+  ############################
+  # Milvus Lite (local file-based)
+  ############################
+  milvus:
+    image: milvusdb/milvus:latest
+    container_name: milvus
+    volumes:
+      - milvusdata:/var/lib/milvus
+    ports:
+      - "19530:19530"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  kafkadata:
+  milvusdata:

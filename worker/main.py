@@ -1,5 +1,5 @@
 def main():
-    print("Hello from localllm!")
+    print("Hello from worker!")
 
 
 if __name__ == "__main__":
