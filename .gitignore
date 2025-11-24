@@ -10,3 +10,4 @@ logs/*
 app/chat/public/uploads/*
 *.jpg
 *.png
+TRASH.md

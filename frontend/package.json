@@ -12,6 +12,8 @@
     "dependencies": {
         "formidable": "^3.5.4",
         "highlight.js": "^11.9.0",
+        "js-cookie": "^3.0.5",
+        "lucide-react": "^0.554.0",
         "mermaid": "^11.12.1",
         "next": "latest",
         "react": "latest",
@@ -25,7 +27,6 @@
         "uuidv4": "^6.2.13"
     },
     "devDependencies": {
-        "@tailwindcss/postcss": "^4.1.17",
         "@types/node": "24.10.1",
         "@types/react": "latest",
         "@types/react-dom": "latest",
@@ -33,7 +34,7 @@
         "eslint": "latest",
         "eslint-config-next": "latest",
         "postcss": "^8.5.6",
-        "tailwindcss": "^4.1.17",
+        "tailwindcss": "^3.4.14",
         "typescript": "5.9.3"
     }
 }

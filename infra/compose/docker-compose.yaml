@@ -1,9 +1,6 @@
 version: "3.9"
 
 services:
-  ############################
-  # model serving service
-  ############################
   vllm:
     image: vllm/vllm-openai:latest
     container_name: vllm
@@ -22,9 +19,6 @@ services:
             - capabilities: [gpu]
     restart: unless-stopped
 
-  ############################
-  # FastAPI service
-  ############################
   api:
     build:
       context: ./
@@ -46,9 +40,6 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
-  ############################
-  # Worker Container (CPU-only)
-  ############################
   worker:
     build:
       context: ./
@@ -66,9 +57,6 @@ services:
       - MILVUS_URI=http://milvus:19530
     restart: unless-stopped
 
-  ############################
-  # Postgres
-  ############################
   postgres:
     image: postgres:18
     container_name: postgres
@@ -77,14 +65,11 @@ services:
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=appdb
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
     restart: unless-stopped
 
-  ############################
-  # Redis
-  ############################
   redis:
     image: redis:8.4
     container_name: redis
@@ -95,9 +80,6 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
-  ############################
-  # Kafka (single broker)
-  ############################
   kafka:
     image: apache/kafka:latest
     container_name: kafka
@@ -114,9 +96,6 @@ services:
       - "9092:9092"
     restart: unless-stopped
 
-  ############################
-  # Milvus Lite (local file-based)
-  ############################
   milvus:
     image: milvusdb/milvus:latest
     container_name: milvus
