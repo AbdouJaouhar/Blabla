@@ -1,6 +1,6 @@
-# LocalLLM
+# 🌳 Blabla
 
-Run LLMs locally with a web interface. Chat with models like Qwen or Phi using your own GPU.
+Run LLMs locally with a web interface (based on NextJS). Chat with models like Qwen or Phi using your own GPU.
 
 ## What's included
 
@@ -8,6 +8,12 @@ Run LLMs locally with a web interface. Chat with models like Qwen or Phi using y
 - **Backend**: FastAPI service with user authentication
 - **Model Server**: vLLM for fast inference with KV caching via Redis
 - **Database**: SQLAlchemy + Alembic for user/chat persistence
+
+## Project vision
+
+Right now, this is a standard chat interface. The goal is to evolve it into something more flexible a graph-based discussion system where conversations branch out instead of staying linear. Think treelike exploration of ideas where you can fork discussions, explore different paths, and see how concepts connect.
+
+The aim is to support tree-based thinking, branching reasoning that lets you map out complex thoughts visually and navigate between different exploration threads.
 
 ## Requirements
 
